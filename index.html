@@ -2,71 +2,147 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>Telegram CloudStorage test</title>
+  <title>CloudStorage bulk generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      padding: 16px;
-    }
-    input, button {
-      width: 100%;
-      padding: 8px;
-      margin-top: 8px;
-    }
-    pre {
-      background: #f3f3f3;
-      padding: 8px;
-      white-space: pre-wrap;
-    }
+    body { font-family: system-ui, sans-serif; padding: 16px; }
+    input, button { width: 100%; padding: 10px; margin-top: 8px; }
+    pre { background: #f3f3f3; padding: 10px; white-space: pre-wrap; }
+    .muted { font-size: 12px; opacity: 0.7; }
   </style>
 </head>
 <body>
 
-<h2>CloudStorage test</h2>
+<h2>CloudStorage bulk test</h2>
 
-<input id="key" placeholder="key (например: note)" />
-<input id="value" placeholder="value" />
+<input id="mb" value="1" />
+<div class="muted">Сколько MB сгенерировать (1 MB = 256 ключей)</div>
 
-<button onclick="save()">Save</button>
-<button onclick="load()">Load</button>
+<button onclick="generate()">▶️ Generate</button>
+<button onclick="validate()">🔍 Validate</button>
+<button onclick="clearAll()">🗑️ Clear all</button>
 
-<pre id="output"></pre>
+<pre id="out"></pre>
 
 <script>
   const tg = Telegram.WebApp;
   tg.ready();
 
+  const BLOCK_SIZE = 4096; // 4 KB на ключ
+  const PREFIX = "chunk_";
+  const out = document.getElementById("out");
+
   function log(msg) {
-    document.getElementById('output').textContent += msg + '\n';
+    out.textContent += msg + "\n";
+    out.scrollTop = out.scrollHeight;
   }
 
-  function save() {
-    const key = document.getElementById('key').value;
-    const value = document.getElementById('value').value;
-
-    tg.CloudStorage.setItem(key, value, (err) => {
-      if (err) {
-        log('❌ save error: ' + err);
-      } else {
-        log('✅ saved');
-      }
-    });
+  function byteLen(str) {
+    return new TextEncoder().encode(str).length;
   }
 
-  function load() {
-    const key = document.getElementById('key').value;
+  function makeBlock(bytes) {
+    const alphabet =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{} ";
+    let s = "";
+    while (s.length < bytes) s += alphabet;
+    return s.slice(0, bytes);
+  }
 
-    tg.CloudStorage.getItem(key, (err, value) => {
-      if (err) {
-        log('❌ load error: ' + err);
-      } else {
-        log('📦 value: ' + value);
+  function setItem(key, value) {
+    return new Promise(res =>
+      tg.CloudStorage.setItem(key, value, err => res(!err))
+    );
+  }
+
+  function getItem(key) {
+    return new Promise(res =>
+      tg.CloudStorage.getItem(key, (_, v) => res(v ?? ""))
+    );
+  }
+
+  function getKeys() {
+    return new Promise(res =>
+      tg.CloudStorage.getKeys((_, keys) =>
+        res((keys || []).filter(k => k.startsWith(PREFIX)))
+      )
+    );
+  }
+
+  async function generate() {
+    out.textContent = "";
+    const mb = Math.max(0, Number(document.getElementById("mb").value));
+    const totalBytes = mb * 1024 * 1024;
+    const totalKeys = Math.ceil(totalBytes / BLOCK_SIZE);
+
+    log(`🚀 Target: ${mb} MB`);
+    log(`🔑 Keys needed: ${totalKeys}`);
+    log(`📦 Block size: ${BLOCK_SIZE} bytes\n`);
+
+    let stored = 0;
+
+    for (let i = 0; i < totalKeys; i++) {
+      const key = PREFIX + i;
+      const value = makeBlock(BLOCK_SIZE);
+
+      log(`→ saving ${key}`);
+
+      const ok = await setItem(key, value);
+      if (!ok) {
+        log(`❌ FAILED at ${key}`);
+        break;
       }
-    });
+
+      const loaded = await getItem(key);
+      if (loaded !== value) {
+        log(`❌ INVALID readback at ${key}`);
+        break;
+      }
+
+      stored += BLOCK_SIZE;
+      log(`✅ OK — ${(stored / 1024 / 1024).toFixed(2)} MB stored\n`);
+    }
+
+    log(`🏁 DONE: ${(stored / 1024 / 1024).toFixed(2)} MB total`);
+  }
+
+  async function validate() {
+    out.textContent = "";
+    const keys = await getKeys();
+
+    if (keys.length === 0) {
+      log("ℹ️ No keys found");
+      return;
+    }
+
+    let total = 0;
+    log(`🔍 Validating ${keys.length} keys\n`);
+
+    for (const key of keys) {
+      const v = await getItem(key);
+      const size = byteLen(v);
+
+      if (size !== BLOCK_SIZE) {
+        log(`❌ ${key}: ${size} bytes`);
+      } else {
+        log(`✅ ${key}: ${size} bytes`);
+        total += size;
+      }
+    }
+
+    log(`\n✔️ TOTAL VALID: ${(total / 1024 / 1024).toFixed(2)} MB`);
+  }
+
+  async function clearAll() {
+    const keys = await getKeys();
+    for (const k of keys) {
+      tg.CloudStorage.removeItem(k, () => {});
+    }
+    out.textContent = "";
+    log("🗑️ All chunks removed");
   }
 </script>
 
