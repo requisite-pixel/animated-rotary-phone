@@ -2,312 +2,185 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>🔐 Secure Notes Vault</title>
+  <title>Secure Notes (Telegram CloudStorage)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
+  <!-- Bootstrap (простая UI, без эффектов) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
   <style>
-    :root{
-      --bg:#0b0f19; --panel:#0f172a; --text:#e6eaf2; --muted:#a7b0c4; --line:#24314f;
-      --accent:#7c5cff; --accent2:#3dd6d0; --danger:#ff4d6d; --ok:#2dd4bf; --warn:#fbbf24;
-      --r:18px; --shadow:0 12px 40px rgba(0,0,0,.35);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, sans-serif;
-    }
-    @media (prefers-color-scheme: light){
-      :root{ --bg:#f6f7fb; --panel:#ffffff; --text:#0b1020; --muted:#66708a; --line:#e5e9f5;
-        --shadow:0 10px 30px rgba(30,50,110,.12); }
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family:var(--sans); color:var(--text);
-      background:
-        radial-gradient(1200px 800px at 15% 0%, rgba(124,92,255,.18), transparent 60%),
-        radial-gradient(1000px 700px at 95% 20%, rgba(61,214,208,.14), transparent 55%),
-        var(--bg);
-    }
-
-    .app{height:100%; display:flex; flex-direction:column; gap:12px; padding:14px; max-width:1200px; margin:0 auto;}
-    header{
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding:12px 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-      border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); backdrop-filter: blur(10px);
-    }
-    .brand{display:flex; align-items:center; gap:10px; min-width:0;}
-    .logo{
-      width:34px; height:34px; border-radius:12px; flex:0 0 auto;
-      background:
-        radial-gradient(14px 14px at 30% 30%, rgba(255,255,255,.9), transparent 60%),
-        linear-gradient(135deg, var(--accent), var(--accent2));
-      box-shadow: 0 8px 18px rgba(124,92,255,.28);
-    }
-    .brand h1{font-size:14px; margin:0; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .brand .sub{font-size:12px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .top-actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
-
-    button{
-      border:1px solid var(--line); background: rgba(255,255,255,.04); color:var(--text);
-      padding:9px 11px; border-radius:12px; cursor:pointer; font-weight:700;
-      transition: transform .06s ease, background .2s ease, border-color .2s ease;
-      user-select:none;
-    }
-    button:hover{background: rgba(255,255,255,.07); border-color: rgba(124,92,255,.35)}
-    button:active{transform: translateY(1px)}
-    button.primary{background: linear-gradient(135deg, rgba(124,92,255,.95), rgba(61,214,208,.75)); border-color:transparent; color:#fff;}
-    button.danger{border-color: rgba(255,77,109,.35); background: rgba(255,77,109,.10)}
-    button.ghost{background: transparent}
-    button:disabled{opacity:.45; cursor:not-allowed; transform:none}
-
-    .main{display:grid; grid-template-columns:340px 1fr; gap:12px; min-height:0; flex:1 1 auto;}
-    @media (max-width: 920px){ .main{grid-template-columns: 1fr; grid-template-rows: 340px 1fr} }
-
-    .panel{
-      min-height:0;
-      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow);
-      overflow:hidden; display:flex; flex-direction:column;
-    }
-    .panel .hd{
-      padding:12px 12px 10px; display:flex; align-items:center; justify-content:space-between; gap:8px;
-      border-bottom:1px solid var(--line); background: rgba(0,0,0,.06);
-    }
-    .panel .hd .title{font-size:13px; color:var(--muted); font-weight:800; letter-spacing:.3px; text-transform:uppercase;}
-    .panel .bd{padding:12px; min-height:0; overflow:auto}
-
-    .search{display:flex; gap:8px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); background: rgba(0,0,0,.03);}
-    input[type="text"], input[type="password"], textarea{
-      width:100%;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.04);
-      color: var(--text);
-      padding:10px 11px;
-      border-radius: 12px;
-      outline:none;
-      transition:border-color .2s ease, box-shadow .2s ease;
-    }
-    input:focus, textarea:focus{
-      border-color: rgba(124,92,255,.55);
-      box-shadow: 0 0 0 3px rgba(124,92,255,.18);
-    }
-
-    .notes{padding:8px; display:flex; flex-direction:column; gap:8px;}
-    .note-item{
-      border:1px solid var(--line); background: rgba(255,255,255,.03);
-      border-radius:14px; padding:10px; cursor:pointer;
-      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
-    }
-    .note-item:hover{border-color: rgba(124,92,255,.35); background: rgba(255,255,255,.05)}
-    .note-item.active{
-      border-color: rgba(124,92,255,.6);
-      background: linear-gradient(180deg, rgba(124,92,255,.14), rgba(255,255,255,.03));
-    }
-    .note-item .t{font-weight:900; font-size:14px; margin:0 0 4px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-    .note-item .m{font-size:12px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap;}
-    .pill{
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.03);
-      padding:4px 8px; border-radius:999px;
-      font-size:12px; color:var(--muted); white-space:nowrap;
-    }
-
-    .editor-top{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
-    .editor-top .grow{flex:1 1 auto; min-width:160px}
-    .editor-title{font-weight:900; letter-spacing:.2px;}
-    textarea#editor{width:100%; min-height:320px; height:100%; resize:none; line-height:1.45; padding:12px; border-radius:16px;}
-
-    .statusbar{
-      display:flex; gap:10px; align-items:center; justify-content:space-between;
-      padding:10px 12px; border-top:1px solid var(--line); background: rgba(0,0,0,.04);
-      font-size:12px; color:var(--muted);
-    }
-    .statusbar .left, .statusbar .right{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .kbd{font-family: var(--mono); padding:2px 6px; border-radius: 8px; border:1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted);}
-
-    .toast{position: fixed; left: 14px; bottom: 14px; display:flex; flex-direction:column; gap:8px; z-index: 1000; pointer-events:none;}
-    .toast .t{
-      max-width: min(560px, calc(100vw - 28px));
-      border:1px solid var(--line);
-      background: rgba(16, 24, 40, .78);
-      color: var(--text);
-      padding:10px 12px;
-      border-radius: 14px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-      font-size:13px;
-      display:flex; gap:10px; align-items:flex-start;
-    }
-    .toast .t small{display:block; color:var(--muted); margin-top:2px}
-    .tag-ok{color: var(--ok)}
-    .tag-warn{color: var(--warn)}
-    .tag-bad{color: var(--danger)}
-
-    .modal{
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.55);
-      display:none; align-items:center; justify-content:center;
-      z-index: 2000; padding:14px;
-    }
-    .modal.on{display:flex}
-    .modal .card{
-      width: min(520px, 100%);
-      border:1px solid var(--line);
-      border-radius: 22px;
-      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .modal .card .chd{
-      padding: 14px 14px 10px;
-      border-bottom:1px solid var(--line);
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-    }
-    .modal .card .chd h2{margin:0; font-size:15px}
-    .modal .card .cbd{padding:14px}
-    .hint{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.4}
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .row > *{flex:1 1 auto}
-    .row .tight{flex:0 0 auto}
-    .mono{font-family:var(--mono)}
+    body { background:#f7f7fb; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    #notesList .list-group-item { cursor:pointer; }
+    #editor { min-height: 55vh; resize: vertical; }
+    .small-muted { font-size: 12px; color: #6c757d; }
   </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <div class="brand">
-      <div class="logo"></div>
-      <div style="min-width:0">
-        <h1>Secure Notes Vault</h1>
-        <div class="sub">Telegram CloudStorage · AES-GCM · пароль не хранится</div>
+<div class="container py-3">
+
+  <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <div class="fw-bold">🔐 Secure Notes Vault</div>
+      <div class="small-muted">AES-GCM · один пароль (не хранится) · CloudStorage 1024 keys / 4KB value</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button id="btnLock" class="btn btn-outline-secondary btn-sm" disabled>Lock</button>
+      <button id="btnClear" class="btn btn-outline-danger btn-sm">Стереть хранилище</button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div id="alertBox"></div>
+
+  <!-- Unlock card -->
+  <div id="unlockCard" class="card mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-8">
+          <label class="form-label">Пароль</label>
+          <input id="pw" type="password" class="form-control" placeholder="Введите пароль…" autocomplete="current-password">
+          <div class="small-muted mt-1">Пароль нигде не сохраняется. Если забудешь — восстановить невозможно.</div>
+        </div>
+        <div class="col-12 col-md-4 d-grid">
+          <button id="btnUnlock" class="btn btn-primary">Unblock</button>
+        </div>
       </div>
     </div>
+  </div>
 
-    <div class="top-actions">
-      <button id="btnUnlock" class="primary">🔓 Unblock</button>
-      <button id="btnLock" class="ghost" disabled>🔒 Lock</button>
-      <button id="btnNew" disabled>➕ New</button>
-      <button id="btnRename" disabled>✏️ Rename</button>
-      <button id="btnDelete" class="danger" disabled>🗑️ Delete</button>
-      <button id="btnClear" class="danger">⚠️ Clear vault</button>
-    </div>
-  </header>
-
-  <div class="main">
-    <section class="panel">
-      <div class="hd">
-        <div class="title">Notes</div>
-        <div class="pill" id="pillUsage">—</div>
-      </div>
-      <div class="search">
-        <input id="q" type="text" placeholder="Search by title…" disabled />
-      </div>
-      <div class="bd" style="padding:0">
-        <div class="notes" id="notes"></div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="hd">
-        <div class="title">Editor</div>
-        <div class="pill" id="pillState">Locked</div>
-      </div>
-
-      <div class="bd" style="display:flex; flex-direction:column; gap:10px; min-height:0">
-        <div class="editor-top">
-          <div class="grow">
-            <div class="editor-title" id="activeTitle">—</div>
-            <div class="hint" id="activeMeta">Unlock to view notes.</div>
+  <!-- Main app -->
+  <div id="app" class="row g-3 d-none">
+    <!-- Left: notes -->
+    <div class="col-12 col-lg-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex gap-2 mb-2">
+            <input id="q" class="form-control form-control-sm" placeholder="Поиск по названию…" />
+            <span id="usagePill" class="badge text-bg-light border mono" title="Использовано ключей">—</span>
           </div>
-          <button id="btnSave" class="primary" disabled>💾 Save</button>
-        </div>
 
-        <textarea id="editor" placeholder="…" disabled></textarea>
-      </div>
+          <div class="d-flex gap-2 flex-wrap mb-2">
+            <button id="btnNew" class="btn btn-success btn-sm">New</button>
+            <button id="btnRename" class="btn btn-outline-primary btn-sm" disabled>Rename</button>
+            <button id="btnDelete" class="btn btn-outline-danger btn-sm" disabled>Delete</button>
+          </div>
 
-      <div class="statusbar">
-        <div class="left">
-          <span id="statusText">Locked.</span>
-          <span class="kbd">Ctrl</span><span class="kbd">S</span>
-          <span class="hint">to save</span>
-        </div>
-        <div class="right">
-          <span id="byteInfo" class="mono">0 B</span>
-          <span class="pill" id="chunkInfo">—</span>
+          <div id="notesList" class="list-group" style="max-height: 60vh; overflow:auto;"></div>
+
+          <div class="small-muted mt-2">
+            ⚠️ Автосохранения нет (чтобы не нагружать сервер). Сохраняй вручную.
+          </div>
         </div>
       </div>
-    </section>
-  </div>
-</div>
+    </div>
 
-<!-- Unlock modal -->
-<div class="modal" id="unlockModal">
-  <div class="card">
-    <div class="chd">
-      <h2>🔐 Unblock vault</h2>
-      <button id="btnCloseUnlock" class="ghost">✕</button>
-    </div>
-    <div class="cbd">
-      <div class="row">
-        <input id="pw" type="password" placeholder="Пароль…" autocomplete="current-password" />
-        <button id="btnDoUnlock" class="primary tight">Unblock</button>
-      </div>
-      <div class="hint">
-        Пароль нигде не сохраняется. Если забудешь пароль — восстановить невозможно.
-      </div>
-      <div class="hint" id="unlockHint"></div>
-    </div>
-  </div>
-</div>
+    <!-- Right: editor -->
+    <div class="col-12 col-lg-8">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column gap-2">
+          <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+            <div>
+              <div class="fw-semibold" id="activeTitle">—</div>
+              <div class="small-muted" id="activeMeta">—</div>
+            </div>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <span class="mono small-muted" id="byteInfo">0 B</span>
+              <span class="badge text-bg-light border mono" id="chunkInfo">—</span>
+              <button id="btnSave" class="btn btn-primary btn-sm" disabled>Save</button>
+            </div>
+          </div>
 
-<!-- Input modal (New/Rename) -->
-<div class="modal" id="inputModal">
-  <div class="card">
-    <div class="chd">
-      <h2 id="inputTitle">…</h2>
-      <button id="btnCloseInput" class="ghost">✕</button>
-    </div>
-    <div class="cbd">
-      <div class="row">
-        <input id="inputText" type="text" placeholder="Название…" />
-        <button id="btnInputOk" class="primary tight">OK</button>
-      </div>
-      <div class="hint" id="inputHint"></div>
-    </div>
-  </div>
-</div>
+          <textarea id="editor" class="form-control" placeholder="Открой или создай заметку…" disabled></textarea>
 
-<!-- Confirm modal -->
-<div class="modal" id="confirmModal">
-  <div class="card">
-    <div class="chd">
-      <h2 id="confirmTitle">Подтверждение</h2>
-      <button id="btnCloseConfirm" class="ghost">✕</button>
-    </div>
-    <div class="cbd">
-      <div id="confirmText" class="hint" style="font-size:13px"></div>
-      <div class="row" style="margin-top:12px">
-        <button id="btnConfirmNo" class="ghost tight">Cancel</button>
-        <button id="btnConfirmYes" class="danger tight">Yes</button>
+          <!-- Saving bar -->
+          <div id="savingBar" class="d-none">
+            <div class="d-flex align-items-center gap-2">
+              <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+              <div class="small-muted" id="savingText">Сохраняю…</div>
+            </div>
+            <div class="progress mt-2">
+              <div id="savingProg" class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div class="small-muted">
+            Горячая клавиша: <span class="mono">Ctrl+S</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- Modal: input (new/rename) -->
+<div class="modal fade" id="inputModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" id="inputForm">
+      <div class="modal-header">
+        <h5 class="modal-title" id="inputModalTitle">…</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label" id="inputLabel">Название</label>
+        <input id="inputValue" class="form-control" />
+        <div class="small-muted mt-2" id="inputHint"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="inputOk">OK</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: confirm -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmTitle">Подтверждение</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="confirmText">…</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmYes">Yes</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-/* ========= CloudStorage + fallback ========= */
+/* =========================
+   Telegram CloudStorage + fallback
+   ========================= */
 const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
 if (tg) { try { tg.ready(); tg.expand(); } catch(_){} }
 
 const CLOUD_MAX_KEYS = 1024;
 const VALUE_MAX_BYTES = 4096;
-const MAX_PLAINTEXT_CHUNK_BYTES = 2800;
 
+// plaintext chunk size (safe to fit into 4KB after AES-GCM + base64 + JSON)
+const MAX_PLAINTEXT_CHUNK_BYTES = 2500;
+
+// rate limit: 10 chunk-saves per second
+const SETITEM_MIN_INTERVAL_MS = 110;
+
+// prefix
 const P = "cs1_";
 const K_SALT = P + "salt";
 const K_META = P + "meta";
+
+// keys:
+// index chunk: cs1_i_r{rev}_c{i}
+// note chunk:  cs1_n{ID}_r{rev}_c{i}
+function kIndexChunk(rev, i){ return `${P}i_r${rev}_c${i}`; }
+function kNoteChunk(id, rev, i){ return `${P}n${id}_r${rev}_c${i}`; }
 
 function hasCloud() {
   return tg && tg.CloudStorage && typeof tg.CloudStorage.getItem === "function";
@@ -315,65 +188,95 @@ function hasCloud() {
 function byteLen(str){ return new TextEncoder().encode(str).length; }
 function fmtBytes(n){
   const u=["B","KB","MB","GB"]; let i=0,x=n;
-  while(x>=1024 && i<u.length-1){ x/=1024; i++; }
+  while (x>=1024 && i<u.length-1){ x/=1024; i++; }
   return (i===0? String(x|0) : x.toFixed(2))+" "+u[i];
 }
-function cloudSet(key, value){
+
+/* ===== Alerts ===== */
+const alertBox = document.getElementById("alertBox");
+function showAlert(type, text){
+  const div = document.createElement("div");
+  div.className = `alert alert-${type} py-2`;
+  div.textContent = text;
+  alertBox.appendChild(div);
+  setTimeout(()=>div.remove(), 4500);
+}
+
+/* ===== Cloud wrappers ===== */
+let lastSetAt = 0;
+async function rateLimit(){
+  const now = Date.now();
+  const wait = lastSetAt + SETITEM_MIN_INTERVAL_MS - now;
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  lastSetAt = Date.now();
+}
+
+function cloudSetRaw(key, value){
   return new Promise((res)=>{
-    if(!hasCloud()){
-      const s=String(value??"");
-      if(byteLen(s)>VALUE_MAX_BYTES) return res({ok:false, err:"VALUE_TOO_LARGE"});
-      localStorage.setItem(key,s); return res({ok:true});
+    if (!hasCloud()){
+      const s = String(value ?? "");
+      if (byteLen(s) > VALUE_MAX_BYTES) return res({ok:false, err:"VALUE_TOO_LARGE"});
+      localStorage.setItem(key, s);
+      return res({ok:true});
     }
-    tg.CloudStorage.setItem(key,value,(err)=>res({ok:!err, err:err||null}));
+    tg.CloudStorage.setItem(key, value, (err)=>res({ok:!err, err:err||null}));
   });
+}
+async function cloudSet(key, value){
+  await rateLimit(); // enforce 10 saves/sec
+  return cloudSetRaw(key, value);
 }
 function cloudGet(key){
   return new Promise((res)=>{
-    if(!hasCloud()) return res(localStorage.getItem(key) ?? "");
-    tg.CloudStorage.getItem(key,(_e,v)=>res(v ?? ""));
+    if (!hasCloud()) return res(localStorage.getItem(key) ?? "");
+    tg.CloudStorage.getItem(key, (_e,v)=>res(v ?? ""));
   });
 }
 function cloudRemove(key){
   return new Promise((res)=>{
-    if(!hasCloud()){ localStorage.removeItem(key); return res(true); }
-    tg.CloudStorage.removeItem(key,()=>res(true));
+    if (!hasCloud()){ localStorage.removeItem(key); return res(true); }
+    tg.CloudStorage.removeItem(key, ()=>res(true));
   });
 }
 function cloudKeys(){
   return new Promise((res)=>{
-    if(!hasCloud()){
-      const keys=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k) keys.push(k); }
+    if (!hasCloud()){
+      const keys=[]; for (let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k) keys.push(k); }
       return res(keys);
     }
-    tg.CloudStorage.getKeys((_e,keys)=>res(keys||[]));
+    tg.CloudStorage.getKeys((_e, keys)=>res(keys||[]));
   });
 }
 
-/* ========= Crypto ========= */
-let vaultKey=null, unlocked=false;
+/* =========================
+   Crypto (WebCrypto)
+   ========================= */
+let vaultKey = null;
+let unlocked = false;
 
 function u8ToB64(u8){
   let bin=""; const chunk=0x8000;
-  for(let i=0;i<u8.length;i+=chunk) bin += String.fromCharCode(...u8.subarray(i,i+chunk));
+  for (let i=0;i<u8.length;i+=chunk) bin += String.fromCharCode(...u8.subarray(i,i+chunk));
   return btoa(bin);
 }
 function b64ToU8(b64){
   const bin=atob(b64); const u8=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  for (let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
   return u8;
 }
+
 async function getOrCreateSalt(){
-  let s=await cloudGet(K_SALT);
-  if(s) return b64ToU8(s);
-  const salt=crypto.getRandomValues(new Uint8Array(16));
-  const r=await cloudSet(K_SALT,u8ToB64(salt));
-  if(!r.ok) throw new Error("Не удалось сохранить salt");
+  const s = await cloudGet(K_SALT);
+  if (s) return b64ToU8(s);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const r = await cloudSet(K_SALT, u8ToB64(salt));
+  if (!r.ok) throw new Error("Не удалось сохранить salt");
   return salt;
 }
+
 async function deriveKeyFromPassword(password, salt){
-  const enc=new TextEncoder();
-  const baseKey=await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     { name:"PBKDF2", salt, iterations:200000, hash:"SHA-256" },
     baseKey,
@@ -382,543 +285,599 @@ async function deriveKeyFromPassword(password, salt){
     ["encrypt","decrypt"]
   );
 }
+
 async function encryptBytes(plainU8){
-  const iv=crypto.getRandomValues(new Uint8Array(12));
-  const ct=await crypto.subtle.encrypt({name:"AES-GCM", iv}, vaultKey, plainU8);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:"AES-GCM", iv}, vaultKey, plainU8);
   return { v:1, iv:u8ToB64(iv), ct:u8ToB64(new Uint8Array(ct)) };
 }
+
 async function decryptToBytes(obj){
-  const iv=b64ToU8(obj.iv);
-  const ct=b64ToU8(obj.ct);
-  const pt=await crypto.subtle.decrypt({name:"AES-GCM", iv}, vaultKey, ct);
+  const iv = b64ToU8(obj.iv);
+  const ct = b64ToU8(obj.ct);
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv}, vaultKey, ct);
   return new Uint8Array(pt);
 }
+
+/* =========================
+   Chunking & verified save/load
+   ========================= */
 function chunkBytes(u8, maxBytes){
   const out=[];
-  for(let i=0;i<u8.length;i+=maxBytes) out.push(u8.subarray(i,i+maxBytes));
+  for (let i=0;i<u8.length;i+=maxBytes) out.push(u8.subarray(i,i+maxBytes));
   return out;
 }
 
-/* ========= Storage model ========= */
-let meta=null;
-let index={ version:1, nextId:1, notes:[] };
-let activeId=null;
-let dirty=false;
-let autosaveTimer=null;
-
-function kIndexChunk(rev,i){ return `${P}i_r${rev}_c${i}`; }
-function kNoteChunk(id,rev,i){ return `${P}n${id}_r${rev}_c${i}`; }
-
-async function loadEncryptedSingle(key){
-  const s=await cloudGet(key); if(!s) return null;
-  const obj=JSON.parse(s);
-  return decryptToBytes(obj);
-}
-async function saveEncryptedSingle(key, bytes, verify=true){
-  const obj=await encryptBytes(bytes);
-  const value=JSON.stringify(obj);
-  if(byteLen(value)>VALUE_MAX_BYTES) return {ok:false, err:"VALUE_TOO_LARGE"};
-  const r=await cloudSet(key,value);
-  if(!r.ok) return {ok:false, err:r.err||"SET_FAILED"};
-  if(verify){
-    const rb=await cloudGet(key);
-    if(rb!==value) return {ok:false, err:"READBACK_MISMATCH"};
-  }
+async function saveEncryptedSingle(key, bytes){
+  const obj = await encryptBytes(bytes);
+  const value = JSON.stringify(obj);
+  if (byteLen(value) > VALUE_MAX_BYTES) return {ok:false, err:"VALUE_TOO_LARGE"};
+  const r = await cloudSet(key, value);
+  if (!r.ok) return {ok:false, err:r.err || "SET_FAILED"};
+  // verification
+  const rb = await cloudGet(key);
+  if (rb !== value) return {ok:false, err:"READBACK_MISMATCH"};
   return {ok:true};
 }
+
+async function loadEncryptedSingle(key){
+  const s = await cloudGet(key);
+  if (!s) return null;
+  const obj = JSON.parse(s);
+  return decryptToBytes(obj);
+}
+
+async function saveBlob(prefixKeyFn, rev, bytes, onProgress){
+  const chunks = chunkBytes(bytes, MAX_PLAINTEXT_CHUNK_BYTES);
+  const total = chunks.length;
+
+  for (let i=0;i<total;i++){
+    const obj = await encryptBytes(chunks[i]);
+    const value = JSON.stringify(obj);
+
+    if (byteLen(value) > VALUE_MAX_BYTES) throw new Error("Чанк не влез в 4KB. Уменьши MAX_PLAINTEXT_CHUNK_BYTES.");
+
+    const k = prefixKeyFn(rev, i);
+    const r = await cloudSet(k, value);
+    if (!r.ok) throw new Error("Ошибка сохранения чанка "+i);
+
+    // verification (обязательно по требованиям)
+    const rb = await cloudGet(k);
+    if (rb !== value) throw new Error("Readback mismatch на чанке "+i);
+
+    if (onProgress) onProgress(i+1, total);
+  }
+  return total;
+}
+
 async function loadBlob(prefixKeyFn, rev, chunkCount){
   const parts=[];
-  for(let i=0;i<chunkCount;i++){
-    const s=await cloudGet(prefixKeyFn(rev,i));
-    if(!s) throw new Error("Missing chunk "+i);
-    const obj=JSON.parse(s);
+  for (let i=0;i<chunkCount;i++){
+    const s = await cloudGet(prefixKeyFn(rev,i));
+    if (!s) throw new Error("Отсутствует чанк "+i);
+    const obj = JSON.parse(s);
     parts.push(await decryptToBytes(obj));
   }
-  let total=0; for(const p of parts) total+=p.length;
-  const merged=new Uint8Array(total);
-  let off=0; for(const p of parts){ merged.set(p,off); off+=p.length; }
+  let total=0; for (const p of parts) total += p.length;
+  const merged = new Uint8Array(total);
+  let off=0; for (const p of parts){ merged.set(p, off); off += p.length; }
   return merged;
 }
-async function saveBlob(prefixKeyFn, newRev, bytes, verify=true){
-  const chunks=chunkBytes(bytes, MAX_PLAINTEXT_CHUNK_BYTES);
-  for(let i=0;i<chunks.length;i++){
-    const obj=await encryptBytes(chunks[i]);
-    const value=JSON.stringify(obj);
-    if(byteLen(value)>VALUE_MAX_BYTES) throw new Error("Chunk doesn't fit 4KB (tune MAX_PLAINTEXT_CHUNK_BYTES)");
-    const r=await cloudSet(prefixKeyFn(newRev,i), value);
-    if(!r.ok) throw new Error("Save chunk failed "+i);
-    if(verify){
-      const rb=await cloudGet(prefixKeyFn(newRev,i));
-      if(rb!==value) throw new Error("Readback mismatch "+i);
-    }
-  }
-  return chunks.length;
-}
+
 async function deleteBlob(prefixKeyFn, rev, chunkCount){
-  for(let i=0;i<chunkCount;i++) await cloudRemove(prefixKeyFn(rev,i));
+  for (let i=0;i<chunkCount;i++){
+    await cloudRemove(prefixKeyFn(rev,i));
+  }
 }
+
+/* =========================
+   Vault model
+   ========================= */
+let meta = null;
+// meta: { metaRev, indexRev, indexChunks }
+let index = { version:1, nextId:1, notes:[] };
+// note entry: {id,title,updated,rev,chunks,bytes}
+
 async function loadMeta(){
-  const pt=await loadEncryptedSingle(K_META);
-  if(!pt) return null;
+  const pt = await loadEncryptedSingle(K_META);
+  if (!pt) return null;
   return JSON.parse(new TextDecoder().decode(pt));
 }
+
 async function saveMeta(m){
-  const bytes=new TextEncoder().encode(JSON.stringify(m));
-  const r=await saveEncryptedSingle(K_META, bytes, true);
-  if(!r.ok) throw new Error("Save meta failed: "+r.err);
+  const bytes = new TextEncoder().encode(JSON.stringify(m));
+  const r = await saveEncryptedSingle(K_META, bytes);
+  if (!r.ok) throw new Error("Не удалось сохранить meta: "+r.err);
 }
+
 async function loadIndex(){
-  if(!meta || !meta.indexRev) return {version:1,nextId:1,notes:[]};
-  if(meta.indexChunks===0) return {version:1,nextId:1,notes:[]};
-  const bytes=await loadBlob((rev,i)=>kIndexChunk(rev,i), meta.indexRev, meta.indexChunks);
-  const idx=JSON.parse(new TextDecoder().decode(bytes));
-  if(!idx || idx.version!==1) throw new Error("Unsupported index version");
+  if (!meta || !meta.indexRev) return {version:1,nextId:1,notes:[]};
+  const bytes = await loadBlob((rev,i)=>kIndexChunk(rev,i), meta.indexRev, meta.indexChunks);
+  const idx = JSON.parse(new TextDecoder().decode(bytes));
+  if (!idx || idx.version !== 1) throw new Error("Неподдерживаемая версия индекса");
   return idx;
 }
-async function saveIndexTransactional(idx, verify=true){
-  const oldRev=meta.indexRev||0;
-  const oldChunks=meta.indexChunks||0;
-  const newRev=(meta.indexRev||0)+1;
 
-  const bytes=new TextEncoder().encode(JSON.stringify(idx));
-  const newChunkCount=await saveBlob((rev,i)=>kIndexChunk(rev,i), newRev, bytes, verify);
+async function saveIndexTransactional(idx){
+  // 1) save new index rev
+  const oldRev = meta.indexRev || 0;
+  const oldChunks = meta.indexChunks || 0;
+  const newRev = (meta.indexRev || 0) + 1;
 
-  const newMeta={...meta, metaRev:(meta.metaRev||0)+1, indexRev:newRev, indexChunks:newChunkCount};
+  const bytes = new TextEncoder().encode(JSON.stringify(idx));
+  const newChunks = await saveBlob((rev,i)=>kIndexChunk(rev,i), newRev, bytes, null);
+
+  // 2) save meta to point to new index
+  const newMeta = { ...meta, metaRev:(meta.metaRev||0)+1, indexRev:newRev, indexChunks:newChunks };
   await saveMeta(newMeta);
-  meta=newMeta;
+  meta = newMeta;
 
-  if(oldRev && oldChunks) await deleteBlob((rev,i)=>kIndexChunk(rev,i), oldRev, oldChunks);
+  // 3) delete old index chunks
+  if (oldRev && oldChunks) await deleteBlob((rev,i)=>kIndexChunk(rev,i), oldRev, oldChunks);
 }
 
-/* ========= UI helpers ========= */
-const el=(id)=>document.getElementById(id);
-const toastBox=el("toast");
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function toast(kind, msg, detail=""){
-  const div=document.createElement("div");
-  div.className="t";
-  const tag = kind==="ok" ? "<b class='tag-ok'>✓</b>" : kind==="warn" ? "<b class='tag-warn'>!</b>" : "<b class='tag-bad'>×</b>";
-  div.innerHTML = `${tag}<div><div>${escapeHtml(msg)}</div>${detail?`<small>${escapeHtml(detail)}</small>`:""}</div>`;
-  toastBox.appendChild(div);
-  setTimeout(()=>{div.style.opacity="0"; div.style.transform="translateY(6px)";}, 3200);
-  setTimeout(()=>div.remove(), 3800);
+/* =========================
+   UI state
+   ========================= */
+const unlockCard = document.getElementById("unlockCard");
+const app = document.getElementById("app");
+const pw = document.getElementById("pw");
+const btnUnlock = document.getElementById("btnUnlock");
+const btnLock = document.getElementById("btnLock");
+const btnClear = document.getElementById("btnClear");
+
+const q = document.getElementById("q");
+const notesList = document.getElementById("notesList");
+const usagePill = document.getElementById("usagePill");
+
+const btnNew = document.getElementById("btnNew");
+const btnRename = document.getElementById("btnRename");
+const btnDelete = document.getElementById("btnDelete");
+
+const activeTitle = document.getElementById("activeTitle");
+const activeMeta = document.getElementById("activeMeta");
+const editor = document.getElementById("editor");
+const btnSave = document.getElementById("btnSave");
+const byteInfo = document.getElementById("byteInfo");
+const chunkInfo = document.getElementById("chunkInfo");
+
+const savingBar = document.getElementById("savingBar");
+const savingText = document.getElementById("savingText");
+const savingProg = document.getElementById("savingProg");
+
+let activeId = null;
+let isSaving = false;
+
+function setSaving(on, text="Сохраняю…", done=0, total=1){
+  isSaving = on;
+  savingBar.classList.toggle("d-none", !on);
+  savingText.textContent = text;
+  const pct = total ? Math.round((done/total)*100) : 0;
+  savingProg.style.width = pct + "%";
+
+  // disable buttons while saving
+  btnSave.disabled = on || !activeId;
+  btnNew.disabled = on;
+  btnRename.disabled = on || !activeId;
+  btnDelete.disabled = on || !activeId;
+  btnLock.disabled = on || !unlocked;
+  btnClear.disabled = on;
+  editor.disabled = on || !activeId || !unlocked;
+  q.disabled = on || !unlocked;
 }
-function setLockedUI(isUnlocked){
-  unlocked=!!isUnlocked;
-  el("pillState").textContent = unlocked ? "Unlocked" : "Locked";
-  el("btnUnlock").disabled = unlocked;
-  el("btnLock").disabled = !unlocked;
-  el("btnNew").disabled = !unlocked;                 // <-- New включается после unlock
-  el("q").disabled = !unlocked;
-  el("btnSave").disabled = !unlocked || !activeId;
-  el("btnRename").disabled = !unlocked || !activeId;
-  el("btnDelete").disabled = !unlocked || !activeId;
-  el("editor").disabled = !unlocked || !activeId;
-  el("statusText").textContent = unlocked ? "Ready." : "Locked.";
-  if(!unlocked){
-    el("activeTitle").textContent="—";
-    el("activeMeta").textContent="Unlock to view notes.";
-    el("editor").value="";
-    el("byteInfo").textContent="0 B";
-    el("chunkInfo").textContent="—";
-  }
+
+function setUnlockedUI(on){
+  unlocked = on;
+  unlockCard.classList.toggle("d-none", on);
+  app.classList.toggle("d-none", !on);
+  btnLock.disabled = !on;
+  q.disabled = !on;
+  btnNew.disabled = !on;
+  btnRename.disabled = !on || !activeId;
+  btnDelete.disabled = !on || !activeId;
+  btnSave.disabled = !on || !activeId;
+  editor.disabled = !on || !activeId;
 }
-async function refreshUsagePill(){
-  const keys=(await cloudKeys()).filter(k=>k.startsWith(P));
-  el("pillUsage").textContent=`${keys.length}/${CLOUD_MAX_KEYS} keys`;
+
+function updateEditorStats(){
+  const bytes = new TextEncoder().encode(editor.value).length;
+  byteInfo.textContent = fmtBytes(bytes);
+  const estChunks = Math.max(1, Math.ceil(bytes / MAX_PLAINTEXT_CHUNK_BYTES));
+  chunkInfo.textContent = `Est: ${estChunks} chunks`;
 }
+
+async function refreshUsage(){
+  const keys = (await cloudKeys()).filter(k=>k.startsWith(P));
+  usagePill.textContent = `${keys.length}/${CLOUD_MAX_KEYS}`;
+}
+
 function renderNotes(){
-  const q=el("q").value.trim().toLowerCase();
-  const list=el("notes");
-  list.innerHTML="";
-  const notes=index.notes.slice().sort((a,b)=>(b.updated||0)-(a.updated||0))
-    .filter(n=>!q || (n.title||"").toLowerCase().includes(q));
+  const term = q.value.trim().toLowerCase();
+  notesList.innerHTML = "";
 
-  if(notes.length===0){
-    const empty=document.createElement("div");
-    empty.style.padding="12px";
-    empty.style.color="var(--muted)";
-    empty.innerHTML = unlocked ? "Нет заметок. Нажми <b>New</b>." : "Locked.";
-    list.appendChild(empty);
+  const items = index.notes
+    .slice()
+    .sort((a,b)=>(b.updated||0)-(a.updated||0))
+    .filter(n => !term || (n.title||"").toLowerCase().includes(term));
+
+  if (items.length === 0){
+    const div = document.createElement("div");
+    div.className = "text-muted small";
+    div.textContent = "Нет заметок. Нажми New.";
+    notesList.appendChild(div);
     return;
   }
-  for(const n of notes){
-    const div=document.createElement("div");
-    div.className="note-item"+(n.id===activeId?" active":"");
-    const dt=n.updated?new Date(n.updated):null;
-    const metaHtml = [
-      `<span class="pill">${fmtBytes(n.bytes||0)}</span>`,
-      `<span class="pill">${n.chunks||0} chunks</span>`,
-      `<span class="pill">${dt?dt.toLocaleString():"—"}</span>`
-    ].join(" ");
-    div.innerHTML=`
-      <div style="min-width:0">
-        <div class="t">${escapeHtml(n.title||("Note "+n.id))}</div>
-        <div class="m">${metaHtml}</div>
+
+  for (const n of items){
+    const a = document.createElement("a");
+    a.className = "list-group-item list-group-item-action";
+    if (n.id === activeId) a.classList.add("active");
+
+    const dt = n.updated ? new Date(n.updated).toLocaleString() : "—";
+    a.innerHTML = `
+      <div class="d-flex w-100 justify-content-between">
+        <div class="fw-semibold">${escapeHtml(n.title || ("Note "+n.id))}</div>
+        <small class="mono">#${n.id}</small>
       </div>
-      <div class="pill">#${n.id}</div>
+      <div class="small-muted">${fmtBytes(n.bytes||0)} · ${n.chunks||0} chunks · ${dt}</div>
     `;
-    div.onclick=()=>openNote(n.id);
-    list.appendChild(div);
-  }
-}
-function updateEditorInfo(){
-  const txt=el("editor").value;
-  const bytes=new TextEncoder().encode(txt).length;
-  el("byteInfo").textContent=fmtBytes(bytes);
-  const chunks=Math.max(1, Math.ceil(bytes/MAX_PLAINTEXT_CHUNK_BYTES));
-  el("chunkInfo").textContent=`Est: ${chunks} chunks`;
-}
-function markDirty(v){
-  dirty=!!v;
-  el("statusText").textContent = !unlocked ? "Locked." : (dirty ? "Unsaved changes…" : "Saved.");
-}
-function startAutosave(){
-  if(autosaveTimer) clearInterval(autosaveTimer);
-  autosaveTimer=setInterval(async()=>{
-    if(unlocked && activeId && dirty) await saveActiveNote(true);
-  }, 1500);
-}
-
-/* ========= Modals (no prompt/confirm) ========= */
-function showModal(id, on){ el(id).classList.toggle("on", !!on); }
-function openInputModal(title, placeholder, initialValue, hint, onOk){
-  el("inputTitle").textContent = title;
-  el("inputText").placeholder = placeholder || "…";
-  el("inputText").value = initialValue || "";
-  el("inputHint").textContent = hint || "";
-  showModal("inputModal", true);
-  setTimeout(()=>el("inputText").focus(), 0);
-
-  const ok = async ()=>{
-    const v = el("inputText").value;
-    showModal("inputModal", false);
-    await onOk(v);
-  };
-
-  const okBtn = el("btnInputOk");
-  const closeBtn = el("btnCloseInput");
-  const keyHandler = (e)=>{ if(e.key==="Enter") ok(); if(e.key==="Escape") close(); };
-
-  function close(){
-    showModal("inputModal", false);
-    cleanup();
-  }
-  function cleanup(){
-    okBtn.onclick = null;
-    closeBtn.onclick = null;
-    el("inputText").onkeydown = null;
-  }
-
-  okBtn.onclick = async()=>{ await ok(); cleanup(); };
-  closeBtn.onclick = ()=>{ close(); };
-  el("inputText").onkeydown = keyHandler;
-}
-
-function openConfirmModal(title, text, yesText, onYes){
-  el("confirmTitle").textContent = title || "Подтверждение";
-  el("confirmText").textContent = text || "";
-  el("btnConfirmYes").textContent = yesText || "Yes";
-  showModal("confirmModal", true);
-
-  const yesBtn = el("btnConfirmYes");
-  const noBtn = el("btnConfirmNo");
-  const closeBtn = el("btnCloseConfirm");
-
-  function close(){
-    showModal("confirmModal", false);
-    cleanup();
-  }
-  function cleanup(){
-    yesBtn.onclick=null; noBtn.onclick=null; closeBtn.onclick=null;
-  }
-
-  yesBtn.onclick = async()=>{ close(); await onYes(); };
-  noBtn.onclick = ()=>close();
-  closeBtn.onclick = ()=>close();
-}
-
-/* ========= Note actions ========= */
-async function openNote(id){
-  if(!unlocked) return;
-  if(dirty && activeId) await saveActiveNote(true);
-
-  const n=index.notes.find(x=>x.id===id);
-  if(!n) return;
-
-  try{
-    const bytes=await loadBlob((rev,i)=>kNoteChunk(id,rev,i), n.rev, n.chunks);
-    const txt=new TextDecoder().decode(bytes);
-    activeId=id;
-
-    el("activeTitle").textContent = n.title || ("Note "+id);
-    el("activeMeta").textContent = `#${id} · ${fmtBytes(n.bytes||0)} · ${n.chunks} chunks · rev ${n.rev}`;
-    el("editor").value = txt;
-
-    el("editor").disabled=false;
-    el("btnSave").disabled=false;
-    el("btnRename").disabled=false;
-    el("btnDelete").disabled=false;
-
-    markDirty(false);
-    updateEditorInfo();
-    renderNotes();
-  }catch(e){
-    toast("bad","Не удалось открыть заметку", String(e.message||e));
+    a.onclick = (e)=>{ e.preventDefault(); openNote(n.id); };
+    notesList.appendChild(a);
   }
 }
 
-async function createNewNote(){
-  if(!unlocked) return;
-
-  openInputModal(
-    "➕ New note",
-    "Название…",
-    "New note",
-    "Название можно изменить позже.",
-    async (rawTitle)=>{
-      const title=(rawTitle||"").trim() || "New note";
-
-      try{
-        const usedKeys=(await cloudKeys()).filter(k=>k.startsWith(P)).length;
-        if(usedKeys + 1 > CLOUD_MAX_KEYS){
-          toast("warn","Не хватает ключей", "CloudStorage переполнен (1024 keys).");
-          return;
-        }
-
-        const id=index.nextId++;
-        const now=Date.now();
-        const note={ id, title, updated: now, rev: 1, chunks: 1, bytes: 0 };
-
-        const bytes=new Uint8Array(0);
-        const chunks=await saveBlob((rev,i)=>kNoteChunk(id,rev,i), 1, bytes, true);
-        note.chunks=chunks;
-
-        index.notes.push(note);
-        await saveIndexTransactional(index, true);
-
-        toast("ok","Заметка создана", `#${id}`);
-        await refreshUsagePill();
-        renderNotes();
-        await openNote(id);
-      }catch(e){
-        toast("bad","Не удалось создать", String(e.message||e));
-      }
-    }
-  );
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-async function renameActive(){
-  if(!unlocked || !activeId) return;
-  const n=index.notes.find(x=>x.id===activeId);
-  if(!n) return;
+/* =========================
+   Modals
+   ========================= */
+const inputModalEl = document.getElementById("inputModal");
+const inputModal = new bootstrap.Modal(inputModalEl);
+const inputForm = document.getElementById("inputForm");
+const inputModalTitle = document.getElementById("inputModalTitle");
+const inputValue = document.getElementById("inputValue");
+const inputHint = document.getElementById("inputHint");
+let inputResolve = null;
 
-  openInputModal(
-    "✏️ Rename",
-    "Новое название…",
-    n.title || ("Note "+n.id),
-    "",
-    async (rawTitle)=>{
-      const title=(rawTitle||"").trim() || ("Note "+n.id);
-      n.title=title;
-      n.updated=Date.now();
-      try{
-        await saveIndexTransactional(index, true);
-        el("activeTitle").textContent = n.title;
-        toast("ok","Переименовано");
-        renderNotes();
-      }catch(e){
-        toast("bad","Не удалось переименовать", String(e.message||e));
-      }
-    }
-  );
+function askText(title, initialValue, hint){
+  inputModalTitle.textContent = title;
+  inputValue.value = initialValue || "";
+  inputHint.textContent = hint || "";
+  inputModal.show();
+  setTimeout(()=>inputValue.focus(), 0);
+  return new Promise((res)=>{ inputResolve = res; });
 }
+inputForm.addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const v = inputValue.value;
+  inputModal.hide();
+  if (inputResolve) inputResolve(v);
+  inputResolve = null;
+});
+inputModalEl.addEventListener("hidden.bs.modal", ()=>{
+  if (inputResolve){ inputResolve(null); inputResolve=null; }
+});
 
-async function deleteActive(){
-  if(!unlocked || !activeId) return;
-  const n=index.notes.find(x=>x.id===activeId);
-  if(!n) return;
+const confirmModalEl = document.getElementById("confirmModal");
+const confirmModal = new bootstrap.Modal(confirmModalEl);
+const confirmTitle = document.getElementById("confirmTitle");
+const confirmText = document.getElementById("confirmText");
+const confirmYes = document.getElementById("confirmYes");
+let confirmResolve = null;
 
-  openConfirmModal(
-    "🗑️ Delete note",
-    `Удалить заметку "${n.title}"?`,
-    "Delete",
-    async ()=>{
-      try{
-        await deleteBlob((rev,i)=>kNoteChunk(n.id,rev,i), n.rev, n.chunks);
-        index.notes=index.notes.filter(x=>x.id!==n.id);
-        await saveIndexTransactional(index, true);
-
-        activeId=null;
-        el("editor").value="";
-        el("editor").disabled=true;
-        el("btnSave").disabled=true;
-        el("btnRename").disabled=true;
-        el("btnDelete").disabled=true;
-        el("activeTitle").textContent="—";
-        el("activeMeta").textContent="—";
-        markDirty(false);
-
-        toast("ok","Удалено");
-        await refreshUsagePill();
-        renderNotes();
-      }catch(e){
-        toast("bad","Не удалось удалить", String(e.message||e));
-      }
-    }
-  );
+function askConfirm(title, text, yesLabel="Yes"){
+  confirmTitle.textContent = title;
+  confirmText.textContent = text;
+  confirmYes.textContent = yesLabel;
+  confirmModal.show();
+  return new Promise((res)=>{ confirmResolve = res; });
 }
+confirmYes.onclick = ()=>{
+  confirmModal.hide();
+  if (confirmResolve) confirmResolve(true);
+  confirmResolve = null;
+};
+confirmModalEl.addEventListener("hidden.bs.modal", ()=>{
+  if (confirmResolve){ confirmResolve(false); confirmResolve=null; }
+});
 
-async function saveActiveNote(silent=false){
-  if(!unlocked || !activeId) return;
-  const n=index.notes.find(x=>x.id===activeId);
-  if(!n) return;
-
-  const text=el("editor").value;
-  const bytes=new TextEncoder().encode(text);
-  const needChunks=Math.max(1, Math.ceil(bytes.length / MAX_PLAINTEXT_CHUNK_BYTES));
-
-  const usedKeys=(await cloudKeys()).filter(k=>k.startsWith(P)).length;
-  const peak=usedKeys + needChunks; // новая ревизия добавит чанки до удаления старых
-  if(peak > CLOUD_MAX_KEYS){
-    toast("warn","Не сохранится: мало места", `Peak = ${peak}/${CLOUD_MAX_KEYS} keys. Удали что-нибудь крупное.`);
-    return;
-  }
-
-  try{
-    const newRev=(n.rev||0)+1;
-    const newChunks=await saveBlob((rev,i)=>kNoteChunk(n.id,rev,i), newRev, bytes, true);
-
-    const oldRev=n.rev, oldChunks=n.chunks;
-    n.rev=newRev;
-    n.chunks=newChunks;
-    n.bytes=bytes.length;
-    n.updated=Date.now();
-
-    await saveIndexTransactional(index, true);
-
-    if(oldRev && oldChunks) await deleteBlob((rev,i)=>kNoteChunk(n.id,rev,i), oldRev, oldChunks);
-
-    markDirty(false);
-    el("activeMeta").textContent = `#${n.id} · ${fmtBytes(n.bytes||0)} · ${n.chunks} chunks · rev ${n.rev}`;
-    if(!silent) toast("ok","Сохранено", `${fmtBytes(bytes.length)} · ${newChunks} chunks`);
-    await refreshUsagePill();
-    renderNotes();
-  }catch(e){
-    toast("bad","Ошибка сохранения", String(e.message||e));
-  }
-}
-
-/* ========= Unlock/Lock ========= */
-function showUnlock(on){
-  showModal("unlockModal", !!on);
-  if(on){ el("pw").value=""; setTimeout(()=>el("pw").focus(), 0); el("unlockHint").textContent=""; }
-}
+/* =========================
+   Actions
+   ========================= */
 async function doUnlock(){
-  const password=el("pw").value;
-  el("unlockHint").textContent="";
-  if(!password || password.length<4){
-    el("unlockHint").innerHTML = "<span class='tag-warn'>Пароль слишком короткий.</span>";
+  const password = pw.value;
+  if (!password || password.length < 4){
+    showAlert("warning", "Пароль слишком короткий.");
     return;
   }
   try{
-    const salt=await getOrCreateSalt();
-    vaultKey=await deriveKeyFromPassword(password, salt);
+    const salt = await getOrCreateSalt();
+    vaultKey = await deriveKeyFromPassword(password, salt);
 
-    let m=await loadMeta().catch(()=>null);
-    if(!m){
-      meta={ metaRev:1, indexRev:1, indexChunks:1 };
-      index={ version:1, nextId:1, notes:[] };
+    let m = await loadMeta().catch(()=>null);
+    if (!m){
+      // init new vault
+      meta = { metaRev:1, indexRev:1, indexChunks:1 };
+      index = { version:1, nextId:1, notes:[] };
 
-      const idxBytes=new TextEncoder().encode(JSON.stringify(index));
-      const chunks=await saveBlob((rev,i)=>kIndexChunk(rev,i), 1, idxBytes, true);
-      meta.indexChunks=chunks;
+      // save index rev=1
+      const idxBytes = new TextEncoder().encode(JSON.stringify(index));
+      const chunks = await saveBlob((rev,i)=>kIndexChunk(rev,i), 1, idxBytes, null);
+      meta.indexChunks = chunks;
+
       await saveMeta(meta);
-
-      toast("ok","Создан новый vault");
-    }else{
-      meta=m;
-      index=await loadIndex();
-      toast("ok","Vault разблокирован", `${index.notes.length} notes`);
+      showAlert("success", "Создан новый vault.");
+    } else {
+      meta = m;
+      index = await loadIndex();
+      showAlert("success", `Vault разблокирован. Заметок: ${index.notes.length}`);
     }
 
-    setLockedUI(true);
-    showUnlock(false);
-    el("q").value="";
-    activeId=null;
+    activeId = null;
+    activeTitle.textContent = "—";
+    activeMeta.textContent = "—";
+    editor.value = "";
+    updateEditorStats();
 
+    setUnlockedUI(true);
     renderNotes();
-    await refreshUsagePill();
-    startAutosave();
+    await refreshUsage();
+
   }catch(e){
-    vaultKey=null; meta=null; index={version:1,nextId:1,notes:[]};
-    setLockedUI(false);
-    el("unlockHint").innerHTML = "<span class='tag-bad'>Неверный пароль или данные повреждены.</span>";
-    toast("bad","Не удалось разблокировать", String(e.message||e));
+    vaultKey = null;
+    meta = null;
+    index = {version:1,nextId:1,notes:[]};
+    showAlert("danger", "Неверный пароль или данные повреждены.");
+    console.error(e);
   }
 }
+
 function doLock(){
-  vaultKey=null; meta=null; index={version:1,nextId:1,notes:[]}; activeId=null; dirty=false;
-  setLockedUI(false);
-  renderNotes(); refreshUsagePill();
-  toast("ok","Заблокировано");
+  vaultKey = null;
+  meta = null;
+  index = {version:1,nextId:1,notes:[]};
+  activeId = null;
+  editor.value = "";
+  activeTitle.textContent = "—";
+  activeMeta.textContent = "—";
+  setUnlockedUI(false);
+  showAlert("secondary", "Locked.");
 }
 
-/* ========= Clear vault ========= */
-async function clearVault(){
-  openConfirmModal(
-    "⚠️ Clear vault",
-    "ТОЧНО удалить ВСЕ ключи cs1_* ? Это необратимо.",
-    "Clear",
-    async ()=>{
-      try{
-        const keys=(await cloudKeys()).filter(k=>k.startsWith(P));
-        for(const k of keys) await cloudRemove(k);
-        doLock();
-        toast("ok","Vault очищен");
-      }catch(e){
-        toast("bad","Ошибка очистки", String(e.message||e));
-      }
+async function openNote(id){
+  if (!unlocked || isSaving) return;
+  const n = index.notes.find(x=>x.id===id);
+  if (!n) return;
+
+  try{
+    const bytes = await loadBlob((rev,i)=>kNoteChunk(id,rev,i), n.rev, n.chunks);
+    editor.value = new TextDecoder().decode(bytes);
+    activeId = id;
+
+    activeTitle.textContent = n.title || ("Note "+id);
+    activeMeta.textContent = `#${id} · ${fmtBytes(n.bytes||0)} · ${n.chunks} chunks · rev ${n.rev}`;
+
+    btnRename.disabled = false;
+    btnDelete.disabled = false;
+    btnSave.disabled = false;
+    editor.disabled = false;
+
+    updateEditorStats();
+    renderNotes();
+  }catch(e){
+    showAlert("danger", "Не удалось открыть заметку: " + (e.message||e));
+  }
+}
+
+async function createNote(){
+  if (!unlocked || isSaving) return;
+  const title = await askText("New note", "New note", "Название можно поменять позже.");
+  if (title === null) return;
+
+  const usedKeys = (await cloudKeys()).filter(k=>k.startsWith(P)).length;
+  if (usedKeys + 1 > CLOUD_MAX_KEYS){
+    showAlert("warning", "Нет места (ключей) для новой заметки.");
+    return;
+  }
+
+  const id = index.nextId++;
+  const now = Date.now();
+  const note = { id, title: (title.trim() || ("Note "+id)), updated: now, rev:1, chunks:1, bytes:0 };
+
+  try{
+    // save empty
+    setSaving(true, "Сохраняю (создание)…", 0, 1);
+    const bytes = new Uint8Array(0);
+    const chunks = await saveBlob((rev,i)=>kNoteChunk(id,rev,i), 1, bytes, (done,total)=>{
+      setSaving(true, `Сохраняю (создание)… ${done}/${total}`, done, total);
+    });
+    note.chunks = chunks;
+    note.bytes = 0;
+
+    index.notes.push(note);
+    await saveIndexTransactional(index);
+
+    setSaving(false);
+    showAlert("success", "Заметка создана.");
+    await refreshUsage();
+    renderNotes();
+    await openNote(id);
+  }catch(e){
+    setSaving(false);
+    showAlert("danger", "Не удалось создать: " + (e.message||e));
+  }
+}
+
+async function renameNote(){
+  if (!unlocked || !activeId || isSaving) return;
+  const n = index.notes.find(x=>x.id===activeId);
+  if (!n) return;
+
+  const title = await askText("Rename", n.title || ("Note "+n.id), "");
+  if (title === null) return;
+
+  n.title = title.trim() || ("Note "+n.id);
+  n.updated = Date.now();
+
+  try{
+    setSaving(true, "Сохраняю (переименование)…", 0, 1);
+    await saveIndexTransactional(index);
+    setSaving(false);
+
+    activeTitle.textContent = n.title;
+    showAlert("success", "Переименовано.");
+    renderNotes();
+  }catch(e){
+    setSaving(false);
+    showAlert("danger", "Ошибка: " + (e.message||e));
+  }
+}
+
+async function deleteNote(){
+  if (!unlocked || !activeId || isSaving) return;
+  const n = index.notes.find(x=>x.id===activeId);
+  if (!n) return;
+
+  const ok = await askConfirm("Delete note", `Удалить "${n.title}"?`, "Delete");
+  if (!ok) return;
+
+  try{
+    setSaving(true, "Удаляю…", 0, 1);
+    await deleteBlob((rev,i)=>kNoteChunk(n.id,rev,i), n.rev, n.chunks);
+
+    index.notes = index.notes.filter(x=>x.id!==n.id);
+    await saveIndexTransactional(index);
+
+    activeId = null;
+    editor.value = "";
+    editor.disabled = true;
+    btnRename.disabled = true;
+    btnDelete.disabled = true;
+    btnSave.disabled = true;
+
+    activeTitle.textContent = "—";
+    activeMeta.textContent = "—";
+    setSaving(false);
+
+    showAlert("success", "Удалено.");
+    await refreshUsage();
+    renderNotes();
+  }catch(e){
+    setSaving(false);
+    showAlert("danger", "Ошибка удаления: " + (e.message||e));
+  }
+}
+
+async function saveNote(){
+  if (!unlocked || !activeId || isSaving) return;
+  const n = index.notes.find(x=>x.id===activeId);
+  if (!n) return;
+
+  const text = editor.value;
+  const bytes = new TextEncoder().encode(text);
+  const needChunks = Math.max(1, Math.ceil(bytes.length / MAX_PLAINTEXT_CHUNK_BYTES));
+
+  // space check (peak keys)
+  const usedKeys = (await cloudKeys()).filter(k=>k.startsWith(P)).length;
+  const peak = usedKeys + needChunks; // new rev chunks allocated before deleting old
+  if (peak > CLOUD_MAX_KEYS){
+    showAlert("warning", `Не сохранится: мало места. Peak = ${peak}/${CLOUD_MAX_KEYS} keys.`);
+    return;
+  }
+
+  try{
+    const newRev = (n.rev || 0) + 1;
+
+    setSaving(true, `Сохраняю… 0/${needChunks}`, 0, needChunks);
+
+    const newChunkCount = await saveBlob(
+      (rev,i)=>kNoteChunk(n.id,rev,i),
+      newRev,
+      bytes,
+      (done,total)=>setSaving(true, `Сохраняю… ${done}/${total}`, done, total)
+    );
+
+    // update index -> then delete old revision
+    const oldRev = n.rev, oldChunks = n.chunks;
+
+    n.rev = newRev;
+    n.chunks = newChunkCount;
+    n.bytes = bytes.length;
+    n.updated = Date.now();
+
+    setSaving(true, "Сохраняю индекс…", 1, 1);
+    await saveIndexTransactional(index);
+
+    // cleanup old note chunks
+    if (oldRev && oldChunks){
+      setSaving(true, "Удаляю старую ревизию…", 1, 1);
+      await deleteBlob((rev,i)=>kNoteChunk(n.id,rev,i), oldRev, oldChunks);
     }
-  );
+
+    setSaving(false);
+    activeMeta.textContent = `#${n.id} · ${fmtBytes(n.bytes||0)} · ${n.chunks} chunks · rev ${n.rev}`;
+    showAlert("success", "Сохранено (с проверкой).");
+    await refreshUsage();
+    renderNotes();
+
+  }catch(e){
+    setSaving(false);
+    showAlert("danger", "Ошибка сохранения: " + (e.message||e));
+  }
 }
 
-/* ========= Wire ========= */
-el("btnUnlock").onclick = ()=>showUnlock(true);
-el("btnCloseUnlock").onclick = ()=>showUnlock(false);
-el("btnDoUnlock").onclick = doUnlock;
-el("pw").addEventListener("keydown",(e)=>{ if(e.key==="Enter") doUnlock(); if(e.key==="Escape") showUnlock(false); });
+async function clearVault(){
+  if (isSaving) return;
+  const ok = await askConfirm("Стереть хранилище", "Удалить ВСЕ ключи cs1_*? Это необратимо.", "Стереть");
+  if (!ok) return;
 
-el("btnLock").onclick = doLock;
-el("btnNew").onclick = createNewNote;
-el("btnRename").onclick = renameActive;
-el("btnDelete").onclick = deleteActive;
-el("btnSave").onclick = ()=>saveActiveNote(false);
-el("btnClear").onclick = clearVault;
+  try{
+    setSaving(true, "Стираю…", 0, 1);
+    const keys = (await cloudKeys()).filter(k=>k.startsWith(P));
+    for (const k of keys){
+      await cloudRemove(k);
+    }
+    setSaving(false);
+    doLock();
+    showAlert("success", "Хранилище очищено.");
+  }catch(e){
+    setSaving(false);
+    showAlert("danger", "Ошибка очистки: " + (e.message||e));
+  }
+}
 
-el("q").addEventListener("input", renderNotes);
+/* =========================
+   Wire
+   ========================= */
+btnUnlock.onclick = doUnlock;
+pw.addEventListener("keydown", (e)=>{ if (e.key === "Enter") doUnlock(); });
 
-el("editor").addEventListener("input", ()=>{
-  if(!unlocked || !activeId) return;
-  markDirty(true);
-  updateEditorInfo();
-});
+btnLock.onclick = doLock;
+btnClear.onclick = clearVault;
 
-document.addEventListener("keydown",(e)=>{
-  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="s"){
+btnNew.onclick = createNote;
+btnRename.onclick = renameNote;
+btnDelete.onclick = deleteNote;
+btnSave.onclick = saveNote;
+
+q.addEventListener("input", renderNotes);
+editor.addEventListener("input", updateEditorStats);
+
+document.addEventListener("keydown", (e)=>{
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s"){
     e.preventDefault();
-    if(unlocked && activeId) saveActiveNote(false);
+    if (unlocked && activeId && !isSaving) saveNote();
   }
 });
 
-/* ========= Init ========= */
-setLockedUI(false);
-renderNotes();
-refreshUsagePill();
-
-if(!hasCloud()){
-  toast("warn","CloudStorage не найден","Открылся fallback на localStorage (для теста в браузере).");
-}
+(async ()=>{
+  if (!hasCloud()){
+    showAlert("warning", "CloudStorage не найден — включён fallback на localStorage (только для теста в браузере).");
+  }
+  await refreshUsage().catch(()=>{});
+})();
 </script>
 </body>
 </html>
